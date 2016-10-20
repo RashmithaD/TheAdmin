@@ -17,25 +17,25 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:id="@+id/attendanceButtonsLayout"
+            android:visibility="gone"
             android:weightSum="1">
             <Button
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="32dp"
                 android:text="CHECK IN"
                 android:id="@+id/check_in"
-                android:textColor="#585aff"
                 android:layout_weight="0.5"
-                android:background="@drawable/button"
+                style="@style/Widget.AppCompat.Button.blueish"
                 />
 
             <!--style="@style/Widget.AppCompat.Button.white"-->
             <Button
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="32dp"
                 android:text="Check OUT"
                 android:id="@+id/check_out"
                 android:layout_weight="0.5"
-                android:background="@drawable/button"
+                style="@style/Widget.AppCompat.Button.blueish"
                 />
         </LinearLayout>
 
@@ -56,6 +56,7 @@
                 android:layout_height="wrap_content"
                 android:background="@color/white"
                 android:paddingBottom="5dp"
+                android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:id="@+id/attendanceLayout"
                 android:layout_gravity="top">
@@ -64,6 +65,7 @@
                     android:layout_height="wrap_content"
                     android:weightSum="1"
                     android:background="#585aff"
+                    android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:id="@+id/dateRangePickerLayout"
                     android:paddingTop="8dp">
@@ -92,9 +94,11 @@
                         android:layout_weight="0.47"/>
                     <Button
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        android:layout_height="32dp"
                         android:text="GET >"
+                        android:textColor="@color/primary"
                         android:id="@+id/getHistoryButton"
+                        android:background="@drawable/button"
                         />
                 </LinearLayout>
                 <ListView
@@ -103,6 +107,18 @@
                     android:id="@+id/attendanceListView"
                     android:layout_below="@+id/dateRangePickerLayout">
                 </ListView>
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="20sp"
+                    android:visibility="gone"
+                    android:gravity="center"
+                    android:text="No records found."
+                    android:textColor="@color/red"
+                    android:id="@+id/attendanceListError"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="20dp"
+                    android:layout_below="@+id/dateRangePickerLayout" />
             </RelativeLayout>
         </android.support.v7.widget.CardView>
 

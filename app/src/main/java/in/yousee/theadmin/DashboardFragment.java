@@ -11,14 +11,20 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
+import in.yousee.theadmin.constants.RequestCodes;
+import in.yousee.theadmin.constants.ResultCodes;
 import in.yousee.theadmin.model.AttendanceHistory;
 import in.yousee.theadmin.model.CustomException;
+import in.yousee.theadmin.model.Request;
 import in.yousee.theadmin.model.RoasterData;
+import in.yousee.theadmin.model.StringResponse;
 import in.yousee.theadmin.util.LogUtil;
 import in.yousee.theadmin.util.Utils;
 
@@ -31,7 +37,7 @@ import in.yousee.theadmin.util.Utils;
  * Use the {@link DashboardFragment#newInstance} factory method to
  * create an instance of this fragment.
  */
-public class DashboardFragment extends Fragment  implements View.OnClickListener, DialogInterface.OnDismissListener, OnResponseReceivedListener {
+public class DashboardFragment extends CustomFragment  implements View.OnClickListener, DialogInterface.OnDismissListener, OnResponseReceivedListener {
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
@@ -44,6 +50,7 @@ public class DashboardFragment extends Fragment  implements View.OnClickListener
 
     private OnFragmentInteractionListener mListener;
     ListView listView;
+    TextView attendanceListErrorView;
 
     public DashboardFragment() {
         // Required empty public constructor
@@ -77,32 +84,39 @@ public class DashboardFragment extends Fragment  implements View.OnClickListener
     }
 
 
+    Button checkinButton;
+    Button checkoutButton;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View view =  inflater.inflate(R.layout.fragment_dashboard, container, false);
-        Button checkinButton = (Button) view.findViewById(R.id.check_in);
-        Button checkoutButton = (Button) view.findViewById(R.id.check_out);
+        checkinButton = (Button) view.findViewById(R.id.check_in);
+        checkoutButton = (Button) view.findViewById(R.id.check_out);
+        checkinButton.setEnabled(false);
+        checkoutButton.setEnabled(false);
+        checkinButton.setBackgroundResource(R.color.button_disabled);
+        checkoutButton.setBackgroundResource(R.color.button_disabled);
 
         listView = (ListView) view.findViewById(R.id.attendanceListView);
         checkinButton.setOnClickListener(this);
         checkoutButton.setOnClickListener(this);
+        View header = inflater.inflate(R.layout.roaster_listview_header, null);
+        listView.addHeaderView(header);
+        attendanceListErrorView = (TextView) view.findViewById(R.id.attendanceListError);
 
-        //getAttendanceHistory();
-        onResponseReceived(null, 0, 0);
+        getAttendanceHistory();
+        //onResponseReceived(null, 0, 0);
         return view;
     }
 
     private void getAttendanceHistory()
     {
         DashboardMiddleware dashboardMiddleware = new DashboardMiddleware(this);
-        try {
-            dashboardMiddleware.getDashboardData();
-        } catch (CustomException e) {
-            e.printStackTrace();
-        }
-
+        dashboardMiddleware.getDashboardData();
+        requestSenderMiddleware = dashboardMiddleware;
+        sendRequest();
     }
     // TODO: Rename method, update argument and hook method into UI event
     public void onButtonPressed(Uri uri) {
@@ -134,11 +148,16 @@ public class DashboardFragment extends Fragment  implements View.OnClickListener
         {
             case R.id.check_in:
             {
+
+                checkinButton.setEnabled(false);
+                checkinButton.setBackgroundResource(R.color.button_disabled);
                 showLocationDialog(LocationFragment.CHECK_IN);
                 break;
             }
             case R.id.check_out:
             {
+                checkoutButton.setEnabled(false);
+                checkoutButton.setBackgroundResource(R.color.button_disabled);
                 showLocationDialog(LocationFragment.CHECK_OUT);
                 break;
 
@@ -157,14 +176,19 @@ public class DashboardFragment extends Fragment  implements View.OnClickListener
             //datetime.ee
             String dateString = new SimpleDateFormat("yyyy-MM-dd").format(datetime);
             String timeString = new SimpleDateFormat("HH:mm:ss").format(datetime);
+            String dateTime = Utils.getDateTimeInSQLFormat(Calendar.getInstance());
+            //startProgress();
+            requestSenderMiddleware = locationMiddleware;
             if(checkInOut == LocationFragment.CHECK_IN)
             {
-                locationMiddleware.checkin(dateString,"9505878984",timeString);
+                locationMiddleware.checkin(dateString,"9505878984",dateTime);
+
             }
             else if(checkInOut == LocationFragment.CHECK_OUT)
             {
-                locationMiddleware.checkout(dateString,"9505878984",timeString);
+                locationMiddleware.checkout(dateString,"9505878984",dateTime);
             }
+            sendRequest();
             
         } catch (CustomException e) {
             //TODO: show dialogbox
@@ -175,18 +199,66 @@ public class DashboardFragment extends Fragment  implements View.OnClickListener
 
     @Override
     public void onResponseReceived(Object response, int requestCode, int resultCode) {
-        LogUtil.print("onresponserecieved()"+this.isVisible());
-
-        //if(this.isVisible())
+        LogUtil.print("PROGRESS","onresponserecieved()"+this.isVisible());
+        stopProgress();
+        if(this.isVisible())
         {
-//            AttendanceHistory attendanceHistory = (AttendanceHistory) response;
-//            AttendanceAdapter attendanceAdapter = new AttendanceAdapter(this.getActivity(), R.layout.attendance_row, attendanceHistory.historyRecords);
-//            listView.setAdapter(attendanceAdapter);
-            LogUtil.print("roaster----------");
-            RoasterAdapter roasterAdapter = new RoasterAdapter(this.getActivity(), R.layout.attendance_row, RoasterData.getDummyData().roasterRecords);
-            listView.setAdapter(roasterAdapter);
-            Utils.setListViewHeightBasedOnChildren(listView);
 
+            if(requestCode == RequestCodes.NETWORK_REQUEST_DASHBOARD) {
+                if (resultCode == ResultCodes.ROASTER_DETAILS_EXIST)
+                {
+                    LogUtil.print("roaster----------");
+                    RoasterData data = (RoasterData) response;
+
+                    //record details
+                    RoasterData.Record todayRecord = data.getTodayData();
+                    //if the user is not in roaster
+                    if(todayRecord != null)
+                    {
+                        Date now = new Date();
+                        LogUtil.print("Now it is -- "+now.toString());
+                        int timeInDiff = (int) ((now.getTime() - todayRecord.dateTimeIn.getTime())/(60*1000));
+                        int timeOutDiff = (int) ((now.getTime() - todayRecord.dateTimeOut.getTime())/(60*1000));
+                        LogUtil.print(todayRecord.dateTimeIn.toString() +" --- " + timeInDiff);
+
+                        LogUtil.print(todayRecord.dateTimeOut.toString() +" --- " + timeOutDiff);
+
+
+                        //if the checkin time is around 20 minutes from now (before or after)
+                        if (timeInDiff < 20 && timeInDiff > -20) {
+                            checkinButton.setEnabled(true);
+                            checkinButton.setBackgroundResource(R.color.button_primary);
+
+                        }
+                        //if the checkOut time is around 20 minutes from now (before or after)
+                        if (timeOutDiff < 20 && timeOutDiff > -20) {
+                            checkoutButton.setEnabled(true);
+                            checkoutButton.setBackgroundResource(R.color.button_primary);
+                        }
+                    }
+                    else
+                    {
+                        Toast.makeText(this.getContext(),"You are not in the Roaster, Please contact admin to add",Toast.LENGTH_LONG).show();
+                    }
+//                    RoasterAdapter roasterAdapter = new RoasterAdapter(this.getActivity(), R.layout.attendance_row, data.roasterRecords);
+//                    listView.setAdapter(roasterAdapter);
+//                    Utils.setListViewHeightBasedOnChildren(listView);
+//                    attendanceListErrorView.setVisibility(View.GONE);
+                } else {
+//                    listView.setVisibility(View.GONE);
+//                    attendanceListErrorView.setVisibility(View.VISIBLE);
+                }
+            }
+            else if(requestCode == RequestCodes.NETWORK_REQUEST_CHECK_IN)
+            {
+                StringResponse stringResponse = (StringResponse) response;
+                Toast.makeText(this.getContext(), stringResponse.msg,Toast.LENGTH_LONG).show();
+            }
+            else if(requestCode == RequestCodes.NETWORK_REQUEST_CHECK_OUT)
+            {
+                StringResponse stringResponse = (StringResponse) response;
+                Toast.makeText(this.getContext(), stringResponse.msg,Toast.LENGTH_LONG).show();
+            }
         }
 
     }

@@ -14,6 +14,8 @@ import in.yousee.theadmin.constants.RequestCodes;
 import in.yousee.theadmin.constants.ResultCodes;
 import in.yousee.theadmin.constants.ServerFiles;
 import in.yousee.theadmin.model.CustomException;
+import in.yousee.theadmin.model.Response;
+import in.yousee.theadmin.model.UserData;
 import in.yousee.theadmin.util.LogUtil;
 
 public class SessionHandler extends Middleware
@@ -27,6 +29,7 @@ public class SessionHandler extends Middleware
 	private OnResponseReceivedListener responseListener;
 	private static final String SESSION_DEBUG_TAG = "session_tag";
 	private static final String TAG_RESPONSE_MSG= "msg";
+	public static final String TAG_USERDATA = "userdata";
 
 	public static boolean isLoggedIn = false;
 	private String username = "";
@@ -37,7 +40,10 @@ public class SessionHandler extends Middleware
 	private static final String KEY_PHONE = "phone";
 	private static final String KEY_USERNAME = "username";
 	private static final String KEY_PASSWORD = "password";
-	private static final String KEY_USER_ID = "userId";
+	//private static final String KEY_USER_ID = "userId";
+	public static final String KEY_STAFF_ID = "staffId";
+	private static final String KEY_USER_DATA = "userData";
+
 	public static final String KEY_SESSION_ID = "sessionID";
 
 
@@ -71,13 +77,70 @@ public class SessionHandler extends Middleware
 
 	}
 
+	public static boolean isUserDataExists(Context context)
+	{
+
+		SharedPreferences sharedPrefs = getLoginSharedPrefs(context);
+		if (sharedPrefs.contains(KEY_USER_DATA) && sharedPrefs.getString(KEY_USER_DATA, "") != null)
+		{
+			LogUtil.print("userdata exists");
+			return true;
+		}
+		LogUtil.print("userdata does not exists");
+		return false;
+
+	}
+
+	public static String getUserDataString(Context context)
+	{
+		Log.i(SESSION_DEBUG_TAG, "getUserData()");
+		SharedPreferences sharedPrefs = getLoginSharedPrefs(context);
+		if (isUserDataExists(context))
+		{
+
+			String userData = sharedPrefs.getString(KEY_USER_DATA, "");
+			Log.i(SESSION_DEBUG_TAG, "Userdata = " + userData);
+			return userData;
+		}
+		Log.i(SESSION_DEBUG_TAG, "phone false");
+		return null;
+
+	}
+
+	public static UserData getUserData(Context context)
+	{
+		Log.i(SESSION_DEBUG_TAG, "getUserData()");
+		SharedPreferences sharedPrefs = getLoginSharedPrefs(context);
+		if (isUserDataExists(context))
+		{
+
+			String userData = sharedPrefs.getString(KEY_USER_DATA, "");
+			Log.i(SESSION_DEBUG_TAG, "Userdata = " + userData);
+			return new UserData(userData);
+		}
+		Log.i(SESSION_DEBUG_TAG, "phone false");
+		return null;
+
+	}
+
+
+	private void storeUserData(String userdata)
+	{
+		SharedPreferences sharedPrefs = getLoginSharedPrefs(context);
+		SharedPreferences.Editor editor = sharedPrefs.edit();
+		editor.putString(KEY_USER_DATA, userdata);
+		editor.apply();
+		LogUtil.print("setting userData:  " + getUserData(context));
+
+
+	}
 	private void setPhoneNumber(String phone)
 	{
 		SharedPreferences sharedPrefs = getLoginSharedPrefs(context);
 		SharedPreferences.Editor editor = sharedPrefs.edit();
 		editor.putString(KEY_PHONE, phone);
 		this.phone = phone;
-		editor.commit();
+		editor.apply();
 		LogUtil.print("setting phone number" + getPhoneNumber(context));
 
 
@@ -117,24 +180,24 @@ public class SessionHandler extends Middleware
 		editor.putString(KEY_PASSWORD, password);
 		this.username = username;
 		this.password = password;
-		editor.commit();
+		editor.apply();
 
 	}
 
-	private void setUserId(int userId)
+	private void setStaffId(int staffId)
 	{
 		SharedPreferences sharedPrefs = getLoginSharedPrefs(context);
 		SharedPreferences.Editor editor = sharedPrefs.edit();
-		editor.putInt(KEY_USER_ID, userId);
-		Log.i(SESSION_DEBUG_TAG, "userid set to : " + userId);
-		editor.commit();
+		editor.putInt(KEY_STAFF_ID, staffId);
+		Log.i(SESSION_DEBUG_TAG, "userid set to : " + staffId);
+		editor.apply();
 	}
 
-	public static boolean isUserIdExists(Context context)
+	public static boolean isStaffIdExists(Context context)
 	{
 
 		SharedPreferences sharedPrefs = getLoginSharedPrefs(context);
-		if (sharedPrefs.contains(KEY_USER_ID) && sharedPrefs.getInt(KEY_USER_ID, 0) != 0)
+		if (sharedPrefs.contains(KEY_STAFF_ID) && sharedPrefs.getInt(KEY_STAFF_ID, 0) != 0)
 		{
 			return true;
 		}
@@ -142,14 +205,14 @@ public class SessionHandler extends Middleware
 
 	}
 
-	public static int getUserId(Context context)
+	public static int getStaffId(Context context)
 	{
 		Log.i(SESSION_DEBUG_TAG, "getUserId()");
 		SharedPreferences sharedPrefs = getLoginSharedPrefs(context);
-		if (isUserIdExists(context))
+		if (isStaffIdExists(context))
 		{
 
-			int userId = sharedPrefs.getInt(KEY_USER_ID, -1);
+			int userId = sharedPrefs.getInt(KEY_STAFF_ID, -1);
 			Log.i(SESSION_DEBUG_TAG, "userId = " + userId);
 			return userId;
 		}
@@ -224,15 +287,6 @@ public class SessionHandler extends Middleware
 
 	};
 
-	public void loginExec() throws CustomException
-	{
-
-		Log.i("tag", "in login exec");
-		if (getLoginCredentials(username, password))
-		{
-			loginExec(username, password);
-		}
-	}
 
 	public void verifyExec(String phone, LoginActivity responseListener) throws CustomException
 	{
@@ -243,8 +297,6 @@ public class SessionHandler extends Middleware
 		request.put("phoneNumber", phone);
 		this.phone = phone;
 		setPhoneNumber(phone);
-		sendRequest();
-
 	}
 
 	public void submitOTP(String phone, String otp, LoginActivity loginFeatureClient) throws CustomException
@@ -254,26 +306,10 @@ public class SessionHandler extends Middleware
 		request.put("otp", otp);
 		request.setRequestCode(RequestCodes.NETWORK_REQUEST_OTP_SUBMIT);
 		setPhoneNumber(phone);
-		this.loginFeatureClient = loginFeatureClient;
 		this.phone = phone;
-		sendRequest();
 	}
 
-	public void loginExec(String username, String password) throws CustomException
-	{
-		Log.i("tag", "loginExec(" + username + ", " + password + ")");
-
-		this.username = username;
-		this.password = password;
-		request.setUrl(NetworkConnectionHandler.DOMAIN + ServerFiles.LOGIN_EXEC);
-		request.put("username", username);
-		request.put("password", password);
-		request.setRequestCode(RequestCodes.NETWORK_REQUEST_LOGIN);
-		sendRequest();
-
-	}
-
-	public void logout(OnResponseReceivedListener listener) throws CustomException
+	public void logout(OnResponseReceivedListener listener)
 	{
 
 		Log.i(SESSION_DEBUG_TAG, "logging out");
@@ -281,62 +317,61 @@ public class SessionHandler extends Middleware
 		SharedPreferences.Editor editor = sharedPrefs.edit();
 		editor.remove(KEY_SESSION_ID);
 		editor.remove(KEY_PHONE);
-		editor.commit();
+		editor.remove(KEY_STAFF_ID);
+		editor.remove(KEY_USER_DATA);
+		editor.apply();
 
 	}
 
 	@Override
-	public void serveResponse(String result, int requestCode, int resultCode)
+	public void serveResponse(Response response)
 	{
-		//this.responseListner.onResponseRecieved(result, requestCode);
-		//this.loginFeatureClient.onLoginSuccess();
-		//Log.i(SESSION_DEBUG_TAG, result);
+		LogUtil.print("serving response ==---- " + response.requestCode);
 
-		LogUtil.print("serving response ==---- " + requestCode);
-
-		if (requestCode == RequestCodes.NETWORK_REQUEST_VERIFY)
+		if (response.requestCode == RequestCodes.NETWORK_REQUEST_VERIFY)
 		{
-			
-			//setPhoneNumber(this.phone);
-			LogUtil.print("request success -- " + result);
+
+			LogUtil.print("request success -- " + response.responseString);
 			try {
-				JSONObject json = new JSONObject(result);
+				JSONObject json = new JSONObject(response.responseString);
 
 				String msg = json.getString("msg");
 				LogUtil.print(msg);
-				listener.onResponseReceived(msg,requestCode, resultCode);
-				//int statusCode = json.getInt("status_code");
-//				if (statusCode == 1) {
-//					LogUtil.print("success -------" );
-//					responseListener.onResponseReceived(new Boolean(true), requestCode);
-//					return;
-//				}
-//				else
-//				{
-//					responseListener.onResponseReceived(new Boolean(false), requestCode);
-//
-//				}
+				listener.onResponseReceived(msg,response.requestCode, response.resultCode);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
-		else if(requestCode == RequestCodes.NETWORK_REQUEST_OTP_SUBMIT)
+		else if(response.requestCode == RequestCodes.NETWORK_REQUEST_OTP_SUBMIT)
 		{
 			LogUtil.print("OTP submit");
 			JSONObject json;
-			int statusCode = 0;
-			String sessionId = "";
-			String msg = "";
+			String msg = null;
+			String userDataString = null;
+			UserData userData = null;
 			try
 			{
-				json = new JSONObject(result);
-				//statusCode = json.getInt("status_code");
-				msg = json.getString(TAG_RESPONSE_MSG);
-				LogUtil.print(msg);
+				json = new JSONObject(response.responseString);
+				if(response.resultCode == ResultCodes.USER_DATA_SUCCESS)
+				{
+					userDataString = json.getString(TAG_USERDATA);
+					userData = new UserData(userDataString);
+					LogUtil.print("user data -- ");
+					this.setPhoneNumber(userData.phone);
+					this.setStaffId(userData.staffId);
+					this.storeUserData(userData.string);
+					listener.onResponseReceived(userData,response.requestCode,response.resultCode);
+				}
+				else
+				{
+					msg = json.getString(TAG_RESPONSE_MSG);
+					listener.onResponseReceived(msg,response.requestCode,response.resultCode);
+
+				}
 			} catch (Exception e) {
 				LogUtil.print(e.getMessage());
 			}
-			listener.onResponseReceived(msg,requestCode,resultCode);
+
 		}
 		/*
 		else if (requestCode == RequestCodes.NETWORK_REQUEST_LOGOUT)

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TheAdmin</string>
+    <string name="app_name">InTime</string>
 
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
@@ -8,6 +8,7 @@
 
     <string name="hello_world">Hello world!</string>
     <string name="title_activity_main">Admin</string>
+    <string name="title_activity_retry">Retry</string>
     <string name="permission_rationale" />
 
     <string name="hello_blank_fragment">Leaves fragment</string>
@@ -16,8 +17,8 @@
     <string name="from">From Date</string>
     <string name="to">To Date</string>
     <string name="reason">Enter reason for leave..</string>
-    <string name="typeofleave" >Earned Leave</string>
-    <string name="SERVER_DOMAIN" >https://phpmysql-mittu-spidey.c9users.io/TheAdmin/index.php/</string>
+    <string name="typeofleave">Earned Leave</string>
+    <string name="SERVER_DOMAIN">https://phpmysql-mittu-spidey.c9users.io/TheAdmin/index.php/</string>
 
 
     <!-- Google maps debug key-->

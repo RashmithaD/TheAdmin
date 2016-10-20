@@ -4,7 +4,6 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
-import android.util.Log;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
@@ -16,7 +15,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import in.yousee.theadmin.model.CustomException;
 import in.yousee.theadmin.model.Request;
-import in.yousee.theadmin.model.ResponseBody;
+import in.yousee.theadmin.model.Response;
 import in.yousee.theadmin.util.LogUtil;
 
 /**
@@ -27,7 +26,7 @@ import in.yousee.theadmin.util.LogUtil;
  * @author Laxman
  * @version 1.0 15/08/2013
  */
-public class NetworkConnectionHandler extends AsyncTask<Request, Void, ResponseBody>
+public class NetworkConnectionHandler extends AsyncTask<Request, Void, Response>
 {
 	// used to get System services to check network status and required
 	// information
@@ -35,7 +34,10 @@ public class NetworkConnectionHandler extends AsyncTask<Request, Void, ResponseB
 
 	// web service URL
 	//public static final String DOMAIN = "https://jeevandaan-mittu-spidey.c9users.io/index.php";
-	public static final String DOMAIN = "https://phpmysql-mittu-spidey.c9users.io/TheAdmin-server/index.php/";
+	// public static final String DOMAIN = "https://phpmysql-mittu-spidey.c9users.io/TheAdmin-server/index.php/";
+	//public static final String DOMAIN = "https://lamp-stack-rashmitha.c9users.io/TheAdmin-server/index.php/";
+	//Internet Domain
+	public static final String DOMAIN = "http://gandhihospital.in/InTime/";
 	//public static  String DOMAIN;
 	// DownloadWebpageTask downloadwebContent;
 	Request postRequest;
@@ -81,7 +83,7 @@ public class NetworkConnectionHandler extends AsyncTask<Request, Void, ResponseB
 	 * Checks network status and creates a AsyncTask object starts its
 	 * execution
 	 */
-	public ResponseBody sendRequest(Request postRequest)
+	public Response sendRequest(Request postRequest)
 	{
 		this.postRequest = postRequest;
 
@@ -101,7 +103,7 @@ public class NetworkConnectionHandler extends AsyncTask<Request, Void, ResponseB
 	}
 
 	@Override
-	protected ResponseBody doInBackground(Request... postRequests)
+	protected Response doInBackground(Request... postRequests)
 	{
 		isExecuting = true;
 		return sendRequest(postRequests[0]);
@@ -110,17 +112,19 @@ public class NetworkConnectionHandler extends AsyncTask<Request, Void, ResponseB
 
 	// onPostExecute displays the results of the AsyncTask.
 	@Override
-	protected void onPostExecute(ResponseBody responseBody)
+	protected void onPostExecute(Response response)
 	{
 		isExecuting = false;
 		if (toastString != null)
 		{
 			Toast.makeText(context, toastString, Toast.LENGTH_LONG).show();
+			YouseeCustomActivity.setProgressVisible(this.context,false);
+
 		}
 		LogUtil.print("onPostExecute()");
-		if (responseBody != null) {
+		if (response != null) {
 			LogUtil.print("response body !=  null");
-			listener.serveResponse(responseBody.responseString, responseBody.requestCode, responseBody.resultCode);
+			listener.serveResponse(response);
 		}
 	}
 
@@ -129,7 +133,7 @@ public class NetworkConnectionHandler extends AsyncTask<Request, Void, ResponseB
 	/**
 	 * This method connects to Server and downloads Response is returned
 	 */
-	private ResponseBody downloadUrl(Request postRequest) throws IOException
+	private Response downloadUrl(Request postRequest) throws IOException
 	{
 		URL url = new URL(postRequest.getUrl());
 		HttpURLConnection connection = (HttpURLConnection)url.openConnection();
@@ -162,32 +166,40 @@ public class NetworkConnectionHandler extends AsyncTask<Request, Void, ResponseB
 			{
 				InputStream inputStream = connection.getInputStream();
 				String contentAsString = readIt(inputStream);
-				ResponseBody responseBody = new ResponseBody();
+				Response response = new Response();
 				int requestCode = Integer.valueOf(requestCodeString);
 				int resultCode = Integer.valueOf(resultCodeString);
-				responseBody.requestCode = requestCode;
-				responseBody.responseString = contentAsString;
-				responseBody.resultCode = resultCode;
+				response.requestCode = requestCode;
+				response.responseString = contentAsString;
+				response.resultCode = resultCode;
 				LogUtil.print(contentAsString);
-				return responseBody;
+				return response;
 
 			}
 			else
 			{
+
 				toastString = "error: 101 - Something went wrong, Please Report the issue to the developer.";
 				LogUtil.print(toastString);
 			}
+
 		}
 		else
 		{
-			InputStream inputStream = connection.getInputStream();
-			String contentAsString = readIt(inputStream);
-			LogUtil.print(contentAsString);
+			try
+			{
+				InputStream inputStream = connection.getInputStream();
+				String contentAsString = readIt(inputStream);
+				LogUtil.print(contentAsString);
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
 			toastString = "error: 102 - Something went wrong, Please report the issue to the developer. - "+ responseCode;
 			LogUtil.print(toastString);
 		}
 		return null;
-
 	}
 
 	// Reads an InputStream and converts it to a String.

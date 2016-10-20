@@ -1,11 +1,14 @@
 package in.yousee.theadmin;
 
+import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
+import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -15,26 +18,26 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
+
+import in.yousee.theadmin.model.CustomException;
+import in.yousee.theadmin.model.UserData;
+import in.yousee.theadmin.util.LogUtil;
 
 
-public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener, DashboardFragment.OnFragmentInteractionListener, LeavesFragment.OnFragmentInteractionListener, AttendanceFragment.OnFragmentInteractionListener, SwapsFragment.OnFragmentInteractionListener, LocationFragment.OnFragmentInteractionListener  {
+public class MainActivity extends YouseeCustomActivity
+        implements NavigationView.OnNavigationItemSelectedListener, DashboardFragment.OnFragmentInteractionListener, LeavesFragment.OnFragmentInteractionListener, AttendanceFragment.OnFragmentInteractionListener, SwapsFragment.OnFragmentInteractionListener, LocationFragment.OnFragmentInteractionListener, OnResponseReceivedListener {
 
+    TextView nameView;
+    TextView phoneView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        //set
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
@@ -44,12 +47,27 @@ public class MainActivity extends AppCompatActivity
 
         NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
+        instantiateViews(navigationView);
 
         Fragment dashboardFragment = new DashboardFragment();
         replaceFragmentOnMainContent(dashboardFragment, "JeevanDaan");
     }
 
 
+    private void instantiateViews(NavigationView navigationView)
+    {
+        UserData userData = SessionHandler.getUserData(this);
+        LogUtil.print(userData.toString());
+
+        View view = navigationView.getHeaderView(0);
+        nameView = (TextView) view.findViewById(R.id.navHeaderText);
+        phoneView = (TextView) view.findViewById(R.id.navSubHeaderText);
+
+        nameView.setText(userData.firstName+ " " +userData.lastName);
+        phoneView.setText(userData.phone);
+
+
+    }
     public void replaceFragmentOnMainContent(Fragment fragment, String title) {
         FragmentManager fragmentManager = getSupportFragmentManager();
         fragmentManager.beginTransaction().replace(R.id.content_view, fragment).commit();
@@ -102,7 +120,8 @@ public class MainActivity extends AppCompatActivity
             Fragment attendanceFragment = new AttendanceFragment();
             replaceFragmentOnMainContent(attendanceFragment , "My Attendance");
 
-        } else if (id == R.id.menu_leave) {
+        }
+        else if (id == R.id.menu_leave) {
             Fragment leavesFragment = new LeavesFragment();
             replaceFragmentOnMainContent(leavesFragment, "My Leaves");
 
@@ -110,11 +129,35 @@ public class MainActivity extends AppCompatActivity
             Fragment swapsFragment = new SwapsFragment();
             replaceFragmentOnMainContent(swapsFragment, "My Swaps");
         }
+        else if (id == R.id.menu_logout) {
+            this.logout();
+        }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
     }
+
+    private void logout()
+    {
+        SessionHandler sessionHandler = new SessionHandler(this);
+        requestSenderMiddleware = sessionHandler;
+        sessionHandler.logout(this);
+        showLoginActivity();
+        finish();
+        //sendRequest();
+
+    }
+    public void showLoginActivity()
+    {
+        Log.i("tag", "in Show login activity");
+        Intent intent = new Intent();
+        //intent.putExtra("sessionId", sessionId);
+        intent.setClass(this, LoginActivity.class);
+        startActivity(intent);
+    }
+
+
 
     @Override
     public void onFragmentInteraction(Uri uri) {
@@ -130,4 +173,13 @@ public class MainActivity extends AppCompatActivity
         super.onStop();
     }
 
+    @Override
+    public void onResponseReceived(Object response, int requestCode, int resultCode) {
+
+    }
+
+    @Override
+    public Context getContext() {
+        return getApplicationContext();
+    }
 }

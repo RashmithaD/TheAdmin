@@ -36,6 +36,22 @@ public class Utils {
         listView.requestLayout();
     }
 
+    public static String getTimeFromDateTime(String dateString)
+    {
+        String timeString = null;
+        try {
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+            Date date = format.parse(dateString);
+            SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm:ss");
+            timeString= timeFormat.format(date);
+
+        } catch (ParseException e) {
+            timeString = "";
+            e.printStackTrace();
+        }
+        return timeString;
+    }
+
     public static String getDisplayDateString(Calendar calendar)
     {
         SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy");
@@ -48,12 +64,30 @@ public class Utils {
         Date date = calendar.getTime();
         return format.format(date);
     }
+    public static String getDateTimeInSQLFormat(Calendar calendar)
+    {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = calendar.getTime();
+        return format.format(date);
+    }
     public static Date getEncodedDateFromDisplayString(String date)
     {
         SimpleDateFormat format = new SimpleDateFormat("MMM dd, yyyy");
         Date newDate = null;
         try {
             newDate = format.parse(date);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return newDate;
+
+    }
+    public static Date getEncodedDateFromSqlString(String date, String time)
+    {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date newDate = null;
+        try {
+            newDate = format.parse(date+ " "+time);
         } catch (ParseException e) {
             e.printStackTrace();
         }

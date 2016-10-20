@@ -1,5 +1,6 @@
 package in.yousee.theadmin;
 
+import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -17,12 +18,14 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.LinearInterpolator;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -118,6 +121,8 @@ public class LocationFragment extends DialogFragment implements OnMapReadyCallba
         // Inflate the layout for this fragment
         super.onCreateView(inflater, container, savedInstanceState);
         View view = inflater.inflate(R.layout.fragment_location, container, false);
+
+
         mapView = (MapView) view.findViewById(R.id.mapview);
         mapView.onCreate(savedInstanceState);
         testText = (TextView) view.findViewById(R.id.testText);
@@ -384,6 +389,8 @@ public class LocationFragment extends DialogFragment implements OnMapReadyCallba
             polygon.setFillColor(Color.argb(128, 0, 255, 0));
             textViewString = "Registering your attendance";
             messageBackground.setBackgroundResource(R.color.green);
+
+
         }
         else
         {
@@ -392,6 +399,7 @@ public class LocationFragment extends DialogFragment implements OnMapReadyCallba
             textViewString = "Please walk into the work location, your attendance will be registered automatically";
             messageBackground.setBackgroundResource(R.color.red);
         }
+        messageBackground.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, testText.getHeight()));
         testText.setText(""+textViewString);
 
     }
@@ -577,35 +585,35 @@ public class LocationFragment extends DialogFragment implements OnMapReadyCallba
     {
         // Instantiates a new Polygon object and adds points to define a rectangle
         //gandhi
-//        PolygonOptions rectOptions = new PolygonOptions()
-//                .add(new LatLng(17.422535, 78.501770),
-//                        new LatLng(17.424829, 78.502028),
-//                        new LatLng(17.424727, 78.503605),
-//                        new LatLng(17.426063, 78.504042),
-//                        new LatLng(17.423995, 78.505869),
-//                        new LatLng(17.422245, 78.504238)
-//                )
-//                .strokeColor(Color.RED)
-//                .fillColor(Color.argb(128, 255, 0, 0))
-//                ;
-//        //meerpet
         PolygonOptions rectOptions = new PolygonOptions()
-                .add(new LatLng(17.319037, 78.527645),
-                        new LatLng(17.319301, 78.527712),
-                        new LatLng(17.319268, 78.527892),
-                        new LatLng(17.319002, 78.527876)
-                        )
+                .add(new LatLng(17.422535, 78.501770),
+                        new LatLng(17.424829, 78.502028),
+                        new LatLng(17.424727, 78.503605),
+                        new LatLng(17.426063, 78.504042),
+                        new LatLng(17.423995, 78.505869),
+                        new LatLng(17.422245, 78.504238)
+                )
                 .strokeColor(Color.RED)
                 .fillColor(Color.argb(128, 255, 0, 0))
                 ;
+//        //meerpet
+//        PolygonOptions rectOptions = new PolygonOptions()
+//                .add(new LatLng(17.319037, 78.527645),
+//                        new LatLng(17.319301, 78.527712),
+//                        new LatLng(17.319268, 78.527892),
+//                        new LatLng(17.319002, 78.527876)
+//                        )
+//                .strokeColor(Color.RED)
+//                .fillColor(Color.argb(128, 255, 0, 0))
+//                ;
 
         //Yousee
 
 //        PolygonOptions rectOptions = new PolygonOptions()
-//                .add(new LatLng(17.426084, 78.453917),
-//                        new LatLng(17.426178, 78.454073),
+//                .add(new LatLng(17.426076, 78.453766),
+//                        new LatLng(17.425876, 78.453814),
 //                        new LatLng(17.425977, 78.454150),
-//                        new LatLng(17.425905, 78.453998)
+//                        new LatLng(17.426009, 78.454168)
 //                )
 //                .strokeColor(Color.RED)
 //                .fillColor(Color.argb(128, 255, 0, 0))
@@ -745,7 +753,7 @@ public class LocationFragment extends DialogFragment implements OnMapReadyCallba
     }
 
     @Override
-    public void onDismiss(DialogInterface dialog) {
+    public void onDismiss(DialogInterface dialogInterface) {
         LogUtil.print("onDismiss()");
         stopListeningToLocationUpdates();
 
@@ -756,7 +764,11 @@ public class LocationFragment extends DialogFragment implements OnMapReadyCallba
         else
         {
             DialogInterface.OnDismissListener parentFragment = (DialogInterface.OnDismissListener) this.getTargetFragment();
-            parentFragment.onDismiss(dialog);
+            parentFragment.onDismiss(dialogInterface);
+        }
+        Dialog dialog = this.getDialog();
+        if (this.getDialog()!= null && this.getDialog().isShowing()) {
+            this.getDialog().dismiss();
         }
 
 //        if (parentFragment instanceof DialogInterface.OnDismissListener) {

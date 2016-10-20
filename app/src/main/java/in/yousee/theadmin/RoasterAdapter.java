@@ -11,10 +11,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 
 import in.yousee.theadmin.model.AttendanceHistoryRecord;
 import in.yousee.theadmin.model.RoasterData;
 import in.yousee.theadmin.util.LogUtil;
+import in.yousee.theadmin.util.Utils;
 
 
 /**
@@ -42,8 +45,6 @@ public class RoasterAdapter extends ArrayAdapter{
         {
             count = roasterRecords.size();
         }
-
-        LogUtil.print("count = "+count);
         return count;
 
     }
@@ -91,8 +92,8 @@ public class RoasterAdapter extends ArrayAdapter{
         }
         RoasterData.Record record = roasterRecords.get(position);
         holder.date.setText(record.date);
-        holder.timeIn.setText(record.timeIn);
-        holder.timeOut.setText(record.timeOut);
+        holder.timeIn.setText(record.shiftTimeIn);
+        holder.timeOut.setText(record.shiftTimeOut);
 
         return convertView;
 

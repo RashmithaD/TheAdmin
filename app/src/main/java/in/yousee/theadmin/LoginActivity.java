@@ -45,11 +45,12 @@ import butterknife.Bind;
 import in.yousee.theadmin.constants.RequestCodes;
 import in.yousee.theadmin.constants.ResultCodes;
 import in.yousee.theadmin.model.CustomException;
+import in.yousee.theadmin.model.UserData;
 import in.yousee.theadmin.util.LogUtil;
 
 import static android.Manifest.permission.READ_CONTACTS;
 
-public class LoginActivity extends AppCompatActivity implements OnResponseReceivedListener, UsesLoginFeature {
+public class LoginActivity extends YouseeCustomActivity implements OnResponseReceivedListener {
 
     private static final int REQUEST_READ_CONTACTS = 0;
     /**
@@ -63,51 +64,61 @@ public class LoginActivity extends AppCompatActivity implements OnResponseReceiv
     //}
 
 
-    @Override
-    public void onLoginFailed() {
-        LogUtil.print("login failed");
-        mOtpView.setError("invalid OTP");
-    }
 
     public void onLoginSuccess() {
         LogUtil.print("in Show main activity");
         Intent intent = new Intent();
         intent.setClass(this, MainActivity.class);
         startActivity(intent);
+        setProgressVisible(this,false);
+        finish();
     }
 
     @Override
     public void onResponseReceived(Object response, int requestCode, int resultCode) {
         //showProgress(false);
+        LogUtil.print("calling progress bar -  false");
+
         LogUtil.print("onressponse recieved " + requestCode + "  " + response.toString());
         if (requestCode == RequestCodes.NETWORK_REQUEST_VERIFY) {
-            if (resultCode == ResultCodes.NETWORK_VERIFY_PHONE_SUCCESS) {
-                promptOtp();
+            LogUtil.print("result code : "+resultCode +" = "+ ResultCodes.CHECK_AUTHORIZATION_SUCCESS);
+            if (resultCode == ResultCodes.CHECK_AUTHORIZATION_SUCCESS) {
                 LogUtil.print("prompt otp");
+                promptOtp();
                 //onLoginSuccess();
             } else {
                 mPhoneView.setError("Mobile number is not registered");
             }
+            setProgressVisible(this,false);
         }
         if (requestCode == RequestCodes.NETWORK_REQUEST_OTP_SUBMIT) {
-            String msg = (String) response;
-            if(resultCode == ResultCodes.NETWORK_VALIDATE_OTP_SUCCESS)
+            LogUtil.print("otp submission");
+            if(resultCode == ResultCodes.USER_DATA_SUCCESS)
             {
+                UserData userData = (UserData) response;
                 LogUtil.print("success");
                 onLoginSuccess();
-                Toast.makeText(this,msg,Toast.LENGTH_SHORT).show();
+                mOtpView.setEnabled(false);
+                mEmailSignInButton.setEnabled(false);
+                Toast.makeText(this,"Logging in..",Toast.LENGTH_SHORT).show();
             }
-            else if(resultCode == ResultCodes.NETWORK_VALIDATE_OTP_INVALID)
+            else if(resultCode == ResultCodes.INVALID_OTP)
             {
+                String msg = (String) response;
                 LogUtil.print("biscuit");
-                mOtpView.setText(msg);
+                mOtpView.setError(msg);
+                mOtpView.requestFocus();
+                setProgressVisible(this,false);
             }
-            else if(resultCode == ResultCodes.NETWORK_VALIDATE_OTP_UPDATE_FAILED)
+            else if(resultCode == ResultCodes.VALIDATE_OTP_STATUS_UPDATE_FAIL)
             {
+                String msg = (String) response;
                 LogUtil.print("biscuit 1");
                 Toast.makeText(this,msg,Toast.LENGTH_SHORT).show();
+                setProgressVisible(this,false);
             }
         }
+
     }
 
 
@@ -117,11 +128,14 @@ public class LoginActivity extends AppCompatActivity implements OnResponseReceiv
         Intent intent = new Intent();
         intent.setClass(this, MainActivity.class);
         startActivity(intent);
+        finish();
     }
 
     private void promptOtp() {
         mOtpLayout.setVisibility(View.VISIBLE);
+//        mOtpView.setText("123456");
         mPhoneView.setEnabled(false);
+        verifyButton.setEnabled(false);
 
     }
 
@@ -145,33 +159,32 @@ public class LoginActivity extends AppCompatActivity implements OnResponseReceiv
     private View mProgressView;
     private View mLoginFormView;
     private LinearLayout mOtpLayout;
-
+    private Button verifyButton;
+    private Button mEmailSignInButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
         // Set up the login form.
-        mEmailView = (AutoCompleteTextView) findViewById(R.id.phone);
         mPhoneView = (AutoCompleteTextView) findViewById(R.id.phone);
-        mPhoneView.setText("9505878984");
+        //mPhoneView.setText("9505878984");
         populateAutoComplete();
 
         mOtpView = (EditText) findViewById(R.id.otp);
-        mPasswordView = (EditText) findViewById(R.id.otp);
         mOtpLayout = (LinearLayout) findViewById(R.id.otpLayout);
-        mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+        mOtpView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
                 if (id == R.id.login || id == EditorInfo.IME_NULL) {
-                    attemptLogin();
+                    submitOtp();
                     return true;
                 }
                 return false;
             }
         });
 
-        Button verifyButton = (Button) findViewById(R.id.button_verify);
+        verifyButton = (Button) findViewById(R.id.button_verify);
         verifyButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -179,7 +192,7 @@ public class LoginActivity extends AppCompatActivity implements OnResponseReceiv
             }
         });
 
-        Button mEmailSignInButton = (Button) findViewById(R.id.sign_in_button);
+        mEmailSignInButton = (Button) findViewById(R.id.sign_in_button);
         mEmailSignInButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -188,7 +201,6 @@ public class LoginActivity extends AppCompatActivity implements OnResponseReceiv
         });
 
         // mLoginFormView = findViewById(R.id.login_form);
-        mProgressView = findViewById(R.id.login_progress);
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
@@ -241,18 +253,18 @@ public class LoginActivity extends AppCompatActivity implements OnResponseReceiv
         // Reset errors.
         //onLoginSuccess();
         //return;
-
         mPhoneView.setError(null);
         String phoneNumber = mPhoneView.getText().toString();
         if (phoneNumber.length() != 10) {
             mPhoneView.setError("Invalid Phone number");
             return;
         } else {
-            //showProgress(true);
             LogUtil.print("sending request");
             SessionHandler sessionHandler = new SessionHandler(this);
+            requestSenderMiddleware = sessionHandler;
             try {
                 sessionHandler.verifyExec(phoneNumber, this);
+                sendRequest();
             } catch (CustomException e) {
                 LogUtil.print(e.getErrorMsg());
             }
@@ -262,6 +274,7 @@ public class LoginActivity extends AppCompatActivity implements OnResponseReceiv
     }
 
     private void submitOtp() {
+        LogUtil.print("in submit OTP");
         // Reset errors.
         mOtpView.setError(null);
         mPhoneView.setError(null);
@@ -278,8 +291,10 @@ public class LoginActivity extends AppCompatActivity implements OnResponseReceiv
         }
         if (error == false) {
             SessionHandler sessionHandler = new SessionHandler(this);
+            requestSenderMiddleware = sessionHandler;
             try {
                 sessionHandler.submitOTP(phoneNumber, otp, this);
+                sendRequest();
             } catch (CustomException e) {
                 LogUtil.print(e.getErrorMsg());
             }
@@ -395,47 +410,8 @@ public class LoginActivity extends AppCompatActivity implements OnResponseReceiv
     }
 
 
-    public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
-        return new CursorLoader(this,
-                // Retrieve data rows for the device user's 'profile' contact.
-                Uri.withAppendedPath(ContactsContract.Profile.CONTENT_URI,
-                        ContactsContract.Contacts.Data.CONTENT_DIRECTORY), ProfileQuery.PROJECTION,
-
-                // Select only email addresses.
-                ContactsContract.Contacts.Data.MIMETYPE +
-                        " = ?", new String[]{ContactsContract.CommonDataKinds.Email
-                .CONTENT_ITEM_TYPE},
-
-                // Show primary email addresses first. Note that there won't be
-                // a primary email address if the user hasn't specified one.
-                ContactsContract.Contacts.Data.IS_PRIMARY + " DESC");
-    }
 
 
-    public void onLoadFinished(Loader<Cursor> cursorLoader, Cursor cursor) {
-        List<String> emails = new ArrayList<>();
-        cursor.moveToFirst();
-        while (!cursor.isAfterLast()) {
-            emails.add(cursor.getString(ProfileQuery.ADDRESS));
-            cursor.moveToNext();
-        }
-
-        addEmailsToAutoComplete(emails);
-    }
-
-
-    public void onLoaderReset(Loader<Cursor> cursorLoader) {
-
-    }
-
-    private void addEmailsToAutoComplete(List<String> emailAddressCollection) {
-        //Create adapter to tell the AutoCompleteTextView what to show in its dropdown list.
-        ArrayAdapter<String> adapter =
-                new ArrayAdapter<>(LoginActivity.this,
-                        android.R.layout.simple_dropdown_item_1line, emailAddressCollection);
-
-        mEmailView.setAdapter(adapter);
-    }
 
     @Override
     public void onStart() {

@@ -7,6 +7,7 @@ import android.content.Context;
 
 import in.yousee.theadmin.model.CustomException;
 import in.yousee.theadmin.model.Request;
+import in.yousee.theadmin.model.Response;
 import in.yousee.theadmin.util.LogUtil;
 
 public abstract class Middleware
@@ -16,6 +17,8 @@ public abstract class Middleware
 	public static final String TAG_USER_ID = "userId";
 	public static final String TAG_PHONE_NUMBER = "phone";
 	public static final String TAG_SESSION_ID = "session_id";
+
+
 	protected ContentValues nameValuePairs = new ContentValues();
 
 	protected void addKeyValue(String key, String value)
@@ -43,14 +46,15 @@ public abstract class Middleware
 	{
 		if(SessionHandler.isSessionIdExists(getContext()))
 		{
-			addKeyValue(TAG_PHONE_NUMBER, "" + SessionHandler.getPhoneNumber(getContext()));
+			addKeyValue(SessionHandler.TAG_PHONE_NUMBER, "" + SessionHandler.getPhoneNumber(getContext()));
 		}
 	}
-	protected void addUserIdToPost()
+
+	protected void addStaffIdToPost()
 	{
-		if (SessionHandler.isSessionIdExists(getContext()))
+		if (SessionHandler.isStaffIdExists(getContext()))
 		{
-			addKeyValue(TAG_USER_ID, "" + SessionHandler.getUserId(getContext()));
+			request.put(SessionHandler.KEY_STAFF_ID, "" + SessionHandler.getStaffId(getContext()));
 		}
 	}
 	protected void addSessionIdToPost()
@@ -74,11 +78,15 @@ public abstract class Middleware
 			connectionHandler.execute(request);
 
 		}
+		else
+		{
+			throw new CustomException(CustomException.ERROR_NETWORK_NOT_FOUND);
+		}
 
 	}
 
 
-	public abstract void serveResponse(String result, int requestCode, int resultCode);
+	public abstract void serveResponse(Response response);
 
 	public Context getContext()
 	{
